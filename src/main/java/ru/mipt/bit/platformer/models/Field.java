@@ -1,4 +1,4 @@
-package ru.mipt.bit.platformer.util;
+package ru.mipt.bit.platformer.models;
 
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.maps.MapRenderer;
@@ -11,6 +11,7 @@ import java.util.List;
 import static ru.mipt.bit.platformer.util.GdxGameUtils.moveRectangleAtTileCenter;
 
 public class Field {
+    
     private final MapRenderer levelRenderer;
     private final TiledMapTileLayer groundLayer;
 
