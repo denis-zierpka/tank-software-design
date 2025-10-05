@@ -14,10 +14,11 @@ import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.Interpolation;
 
-import ru.mipt.bit.platformer.util.Direction;
-import ru.mipt.bit.platformer.util.Field;
-import ru.mipt.bit.platformer.util.Tank;
-import ru.mipt.bit.platformer.util.Tree;
+import ru.mipt.bit.platformer.models.Direction;
+import ru.mipt.bit.platformer.models.Field;
+import ru.mipt.bit.platformer.models.KeyInputHandler;
+import ru.mipt.bit.platformer.models.Tank;
+import ru.mipt.bit.platformer.models.Tree;
 
 import static com.badlogic.gdx.Input.Keys.*;
 import static com.badlogic.gdx.graphics.GL20.GL_COLOR_BUFFER_BIT;
@@ -39,6 +40,8 @@ public class GameDesktopLauncher implements ApplicationListener {
 
     private Texture greenTreeTexture;
     private Tree tree;
+
+    private KeyInputHandler input;
 
     private static final java.util.Map<Integer, Direction> KEY_TO_DIRECTION = java.util.Map.of(
         UP, Direction.UP,
@@ -69,6 +72,8 @@ public class GameDesktopLauncher implements ApplicationListener {
         greenTreeTexture = new Texture("images/greenTree.png");
         tree = new Tree(greenTreeTexture, new GridPoint2(1, 3));
         field.addTree(tree);
+
+        input = new KeyInputHandler();
     }
 
     @Override
@@ -80,12 +85,8 @@ public class GameDesktopLauncher implements ApplicationListener {
         // get time passed since the last render
         float deltaTime = Gdx.graphics.getDeltaTime();
 
-        for (var entry : KEY_TO_DIRECTION.entrySet()) {
-            if (Gdx.input.isKeyPressed(entry.getKey())) {
-                player.tryMove(entry.getValue());
-                break;
-            }
-        }
+        input.handleMovement(player, KEY_TO_DIRECTION);
+        input.handleActions(player);
 
         player.update(deltaTime, MOVEMENT_SPEED);
 
