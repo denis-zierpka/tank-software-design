@@ -6,16 +6,15 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.Rectangle;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 
 import ru.mipt.bit.platformer.models.Tree;
-import ru.mipt.bit.platformer.util.GdxGameUtils;
+import ru.mipt.bit.platformer.interfaces.Renderer;
+import ru.mipt.bit.platformer.interfaces.RectangleFactory;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
-import static ru.mipt.bit.platformer.util.GdxGameUtils.*;
 
 public class TreeTest {
 
@@ -25,22 +24,21 @@ public class TreeTest {
         GridPoint2 input = new GridPoint2(2, 3);
         Rectangle rect = new Rectangle();
 
-        try (MockedStatic<GdxGameUtils> utils = mockStatic(GdxGameUtils.class)) {
-            utils.when(() -> createBoundingRectangle(any(TextureRegion.class)))
-                 .thenReturn(rect);
+        Renderer renderer = mock(Renderer.class);
+        RectangleFactory rectangleFactory = mock(RectangleFactory.class);
+        when(rectangleFactory.create(any(TextureRegion.class))).thenReturn(rect);
 
-            Tree tree = new Tree(texture, input);
-            assertSame(rect, tree.getRectangle());
+        Tree tree = new Tree(texture, input, renderer, rectangleFactory);
+        assertSame(rect, tree.getRectangle());
 
-            assertEquals(2, tree.getCoordinates().x);
-            assertEquals(3, tree.getCoordinates().y);
+        assertEquals(2, tree.getCoordinates().x);
+        assertEquals(3, tree.getCoordinates().y);
 
-            input.set(9, 9);
-            assertEquals(2, tree.getCoordinates().x);
-            assertEquals(3, tree.getCoordinates().y);
+        input.set(9, 9);
+        assertEquals(2, tree.getCoordinates().x);
+        assertEquals(3, tree.getCoordinates().y);
 
-            assertSame(texture, tree.getTexture());
-        }
+        assertSame(texture, tree.getTexture());
     }
 
     @Test
@@ -48,19 +46,16 @@ public class TreeTest {
         Texture texture = mock(Texture.class);
         Rectangle rect = new Rectangle();
 
-        try (MockedStatic<GdxGameUtils> utils = mockStatic(GdxGameUtils.class)) {
-            utils.when(() -> createBoundingRectangle(any(TextureRegion.class)))
-                 .thenReturn(rect);
+        Renderer renderer = mock(Renderer.class);
+        RectangleFactory rectangleFactory = mock(RectangleFactory.class);
+        when(rectangleFactory.create(any(TextureRegion.class))).thenReturn(rect);
 
-            Tree tree = new Tree(texture, new GridPoint2(1, 1));
+        Tree tree = new Tree(texture, new GridPoint2(1, 1), renderer, rectangleFactory);
 
-            Batch batch = mock(Batch.class);
-            tree.render(batch);
+        Batch batch = mock(Batch.class);
+        tree.render(batch);
 
-            utils.verify(() ->
-                    drawTextureRegionUnscaled(eq(batch), any(TextureRegion.class), eq(rect), eq(0f)),
-                times(1)
-            );
-        }
+        verify(renderer, times(1))
+                .draw(eq(batch), any(TextureRegion.class), eq(rect), eq(0f));
     }
 }

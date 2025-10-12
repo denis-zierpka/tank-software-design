@@ -6,8 +6,8 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.Rectangle;
 
-import static ru.mipt.bit.platformer.util.GdxGameUtils.createBoundingRectangle;
-import static ru.mipt.bit.platformer.util.GdxGameUtils.drawTextureRegionUnscaled;
+import ru.mipt.bit.platformer.interfaces.RectangleFactory;
+import ru.mipt.bit.platformer.interfaces.Renderer;
 
 public class Tree {
 
@@ -15,12 +15,14 @@ public class Tree {
     private final TextureRegion treeObstacleGraphics;
     private final GridPoint2 coordinates;
     private final Rectangle treeObstacleRectangle;
+    private final Renderer renderer;
 
-    public Tree(Texture texture, GridPoint2 coordinates) {
+    public Tree(Texture texture, GridPoint2 coordinates, Renderer renderer, RectangleFactory rectangleFactory) {
         this.texture = texture;
         this.treeObstacleGraphics = new TextureRegion(texture);
         this.coordinates = new GridPoint2(coordinates);
-        this.treeObstacleRectangle = createBoundingRectangle(treeObstacleGraphics);
+        this.renderer = renderer;
+        this.treeObstacleRectangle = rectangleFactory.create(treeObstacleGraphics);
     }
 
     public GridPoint2 getCoordinates() {
@@ -36,7 +38,6 @@ public class Tree {
     }
 
     public void render(Batch batch) {
-        drawTextureRegionUnscaled(batch, treeObstacleGraphics, treeObstacleRectangle, 0f);
+        renderer.draw(batch, treeObstacleGraphics, treeObstacleRectangle, 0f);
     }
-
 }

@@ -1,26 +1,29 @@
 package ru.mipt.bit.platformer.models;
 
 import com.badlogic.gdx.graphics.g2d.Batch;
-import com.badlogic.gdx.maps.MapRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.math.GridPoint2;
+
+import ru.mipt.bit.platformer.interfaces.LevelRenderer;
+import ru.mipt.bit.platformer.interfaces.TileObjectPositioner;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static ru.mipt.bit.platformer.util.GdxGameUtils.moveRectangleAtTileCenter;
-
 public class Field {
-    
-    private final MapRenderer levelRenderer;
+
+    private final LevelRenderer levelRenderer; 
     private final TiledMapTileLayer groundLayer;
 
     private final List<Tree> trees = new ArrayList<>();
     private final java.util.Set<GridPoint2> blocked = new java.util.HashSet<>();
 
-    public Field(MapRenderer levelRenderer, TiledMapTileLayer groundLayer) {
+    private final TileObjectPositioner tileObjectPositioner;
+
+    public Field(LevelRenderer levelRenderer, TiledMapTileLayer groundLayer, TileObjectPositioner tileObjectPositioner) {
         this.levelRenderer = levelRenderer;
         this.groundLayer = groundLayer;
+        this.tileObjectPositioner = tileObjectPositioner;
     }
 
     public TiledMapTileLayer ground() {
@@ -33,7 +36,7 @@ public class Field {
 
     public void addTree(Tree tree) {
         trees.add(tree);
-        moveRectangleAtTileCenter(groundLayer, tree.getRectangle(), tree.getCoordinates());
+        tileObjectPositioner.moveAtTileCenter(groundLayer, tree.getRectangle(), tree.getCoordinates());
         blocked.add(new GridPoint2(tree.getCoordinates()));
     }
 

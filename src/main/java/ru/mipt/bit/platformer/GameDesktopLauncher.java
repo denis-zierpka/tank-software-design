@@ -14,10 +14,17 @@ import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.Interpolation;
 
+import ru.mipt.bit.platformer.adapters.MoveCheckerAdapter;
+import ru.mipt.bit.platformer.adapters.LevelRendererAdapter;
+import ru.mipt.bit.platformer.adapters.RectangleFactoryAdapter;
+import ru.mipt.bit.platformer.adapters.RendererAdapter;
+import ru.mipt.bit.platformer.adapters.TileMoverAdapter;
+import ru.mipt.bit.platformer.adapters.TileObjectPositionerAdapter;
 import ru.mipt.bit.platformer.models.Direction;
 import ru.mipt.bit.platformer.models.Field;
 import ru.mipt.bit.platformer.models.KeyInputHandler;
 import ru.mipt.bit.platformer.models.Tank;
+import ru.mipt.bit.platformer.models.TileMovement;
 import ru.mipt.bit.platformer.models.Tree;
 
 import static com.badlogic.gdx.Input.Keys.*;
@@ -31,14 +38,22 @@ public class GameDesktopLauncher implements ApplicationListener {
     private Batch batch;
 
     private TiledMap level;
-    private MapRenderer levelRenderer;
+    private MapRenderer libRenderer;
+    private TiledMapTileLayer groundLayer;
+    private LevelRendererAdapter levelRenderer;
+    private TileObjectPositionerAdapter positioner;
 
     private Field field;
 
     private Texture blueTankTexture;
+    private TileMovement tm;
+    private MoveCheckerAdapter moveChecker;
+    private TileMoverAdapter mover;
     private Tank player;
 
     private Texture greenTreeTexture;
+    private RendererAdapter renderer;
+    private RectangleFactoryAdapter rectangleFactory;
     private Tree tree;
 
     private KeyInputHandler input;
@@ -60,17 +75,25 @@ public class GameDesktopLauncher implements ApplicationListener {
 
         // load level tiles
         level = new TmxMapLoader().load("level.tmx");
-        levelRenderer = createSingleLayerMapRenderer(level, batch);
-        TiledMapTileLayer groundLayer = getSingleLayer(level);
+        libRenderer = createSingleLayerMapRenderer(level, batch);
+        groundLayer = getSingleLayer(level);
 
-        field = new Field(levelRenderer, groundLayer);
+        levelRenderer = new LevelRendererAdapter(libRenderer);
+        positioner = new TileObjectPositionerAdapter();
+
+        field = new Field(levelRenderer, groundLayer, positioner);
 
         // Texture decodes an image file and loads it into GPU memory, it represents a native resource
         blueTankTexture = new Texture("images/tank_blue.png");
-        player = new Tank(blueTankTexture, new GridPoint2(1, 1), field, Interpolation.smooth);
+        tm = new TileMovement(field.ground(), Interpolation.smooth, positioner);
+        moveChecker = new MoveCheckerAdapter(field);
+        mover = new TileMoverAdapter(tm);
+        player = new Tank(blueTankTexture, new GridPoint2(1, 1), moveChecker, mover);
 
         greenTreeTexture = new Texture("images/greenTree.png");
-        tree = new Tree(greenTreeTexture, new GridPoint2(1, 3));
+        renderer = new RendererAdapter();
+        rectangleFactory = new RectangleFactoryAdapter();
+        tree = new Tree(greenTreeTexture, new GridPoint2(1, 3), renderer, rectangleFactory);
         field.addTree(tree);
 
         input = new KeyInputHandler();
