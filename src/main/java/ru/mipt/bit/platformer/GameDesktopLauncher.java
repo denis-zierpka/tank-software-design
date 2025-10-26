@@ -20,6 +20,8 @@ import ru.mipt.bit.platformer.adapters.RectangleFactoryAdapter;
 import ru.mipt.bit.platformer.adapters.RendererAdapter;
 import ru.mipt.bit.platformer.adapters.TileMoverAdapter;
 import ru.mipt.bit.platformer.adapters.TileObjectPositionerAdapter;
+import ru.mipt.bit.platformer.level.LevelLoader;
+import ru.mipt.bit.platformer.level.LevelPopulation;
 import ru.mipt.bit.platformer.models.Direction;
 import ru.mipt.bit.platformer.models.Field;
 import ru.mipt.bit.platformer.models.KeyInputHandler;
@@ -34,6 +36,9 @@ import static ru.mipt.bit.platformer.util.GdxGameUtils.*;
 public class GameDesktopLauncher implements ApplicationListener {
 
     private static final float MOVEMENT_SPEED = 0.4f;
+    private static final boolean LOAD_FROM_TEXT = true;
+    private static final String LEVEL_TEXT_PATH = "population.txt";
+    private static final int RANDOM_TREES_COUNT = 15;
 
     private Batch batch;
 
@@ -54,9 +59,9 @@ public class GameDesktopLauncher implements ApplicationListener {
     private Texture greenTreeTexture;
     private RendererAdapter renderer;
     private RectangleFactoryAdapter rectangleFactory;
-    private Tree tree;
 
     private KeyInputHandler input;
+    private LevelPopulation population;
 
     private static final java.util.Map<Integer, Direction> KEY_TO_DIRECTION = java.util.Map.of(
         UP, Direction.UP,
@@ -88,13 +93,20 @@ public class GameDesktopLauncher implements ApplicationListener {
         tm = new TileMovement(field.ground(), Interpolation.smooth, positioner);
         moveChecker = new MoveCheckerAdapter(field);
         mover = new TileMoverAdapter(tm);
-        player = new Tank(blueTankTexture, new GridPoint2(1, 1), moveChecker, mover);
+
+        population = LOAD_FROM_TEXT
+            ? LevelLoader.fromTextFile(groundLayer, LEVEL_TEXT_PATH)
+            : LevelLoader.random(groundLayer, RANDOM_TREES_COUNT);
+        player = new Tank(blueTankTexture, population.playerStart, moveChecker, mover);
 
         greenTreeTexture = new Texture("images/greenTree.png");
         renderer = new RendererAdapter();
         rectangleFactory = new RectangleFactoryAdapter();
-        tree = new Tree(greenTreeTexture, new GridPoint2(1, 3), renderer, rectangleFactory);
-        field.addTree(tree);
+
+        for (GridPoint2 pos : population.trees) {
+            Tree t = new Tree(greenTreeTexture, pos, renderer, rectangleFactory);
+            field.addTree(t);
+        }
 
         input = new KeyInputHandler();
     }
