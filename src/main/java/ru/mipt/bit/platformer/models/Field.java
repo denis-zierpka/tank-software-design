@@ -40,8 +40,14 @@ public class Field {
         blocked.add(new GridPoint2(tree.getCoordinates()));
     }
 
+    private boolean isInsideBounds(GridPoint2 c) {
+        int width = groundLayer.getWidth();
+        int height = groundLayer.getHeight();
+        return c.x >= 0 && c.y >= 0 && c.x < width && c.y < height;
+    }
+
     public boolean playerCanMoveTo(GridPoint2 destination) {
-        return !blocked.contains(destination);
+        return isInsideBounds(destination) && !blocked.contains(destination);
     }
 
     public void renderTrees(Batch batch) {

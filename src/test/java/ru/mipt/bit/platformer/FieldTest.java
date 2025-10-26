@@ -37,6 +37,10 @@ public class FieldTest {
         LevelRenderer levelRenderer = mock(LevelRenderer.class);
         TiledMapTileLayer layer = mock(TiledMapTileLayer.class);
         TileObjectPositioner positioner = mock(TileObjectPositioner.class);
+
+        when(layer.getWidth()).thenReturn(10);
+        when(layer.getHeight()).thenReturn(8);
+
         Field field = new Field(levelRenderer, layer, positioner);
 
         Tree tree = mock(Tree.class);
