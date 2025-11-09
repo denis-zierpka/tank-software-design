@@ -15,6 +15,7 @@ import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.Interpolation;
 
 import ru.mipt.bit.platformer.adapters.MoveCheckerAdapter;
+import ru.mipt.bit.platformer.adapters.MovementBlockerAdapter;
 import ru.mipt.bit.platformer.adapters.LevelRendererAdapter;
 import ru.mipt.bit.platformer.adapters.RectangleFactoryAdapter;
 import ru.mipt.bit.platformer.adapters.RendererAdapter;
@@ -28,6 +29,18 @@ import ru.mipt.bit.platformer.models.KeyInputHandler;
 import ru.mipt.bit.platformer.models.Tank;
 import ru.mipt.bit.platformer.models.TileMovement;
 import ru.mipt.bit.platformer.models.Tree;
+import ru.mipt.bit.platformer.ai.RandomAiController;
+import ru.mipt.bit.platformer.interfaces.LevelRenderer;
+import ru.mipt.bit.platformer.interfaces.MoveChecker;
+import ru.mipt.bit.platformer.interfaces.MovementBlocker;
+import ru.mipt.bit.platformer.interfaces.RectangleFactory;
+import ru.mipt.bit.platformer.interfaces.Renderer;
+import ru.mipt.bit.platformer.interfaces.TileMover;
+import ru.mipt.bit.platformer.interfaces.TileObjectPositioner;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 import static com.badlogic.gdx.Input.Keys.*;
 import static com.badlogic.gdx.graphics.GL20.GL_COLOR_BUFFER_BIT;
@@ -39,26 +52,31 @@ public class GameDesktopLauncher implements ApplicationListener {
     private static final boolean LOAD_FROM_TEXT = true;
     private static final String LEVEL_TEXT_PATH = "population.txt";
     private static final int RANDOM_TREES_COUNT = 15;
+    private static final int RANDOM_ENEMIES_COUNT = 3;
+    private static final float AI_MOVES_PER_SECOND = 2.0f;
 
     private Batch batch;
 
     private TiledMap level;
     private MapRenderer libRenderer;
     private TiledMapTileLayer groundLayer;
-    private LevelRendererAdapter levelRenderer;
-    private TileObjectPositionerAdapter positioner;
+    private LevelRenderer levelRenderer;
+    private TileObjectPositioner positioner;
 
     private Field field;
 
     private Texture blueTankTexture;
     private TileMovement tm;
-    private MoveCheckerAdapter moveChecker;
-    private TileMoverAdapter mover;
+    private MoveChecker moveChecker;
+    private TileMover mover;
     private Tank player;
+    private List<Tank> enemies;
+    private RandomAiController ai;
+    private MovementBlocker movementBlocker;
 
     private Texture greenTreeTexture;
-    private RendererAdapter renderer;
-    private RectangleFactoryAdapter rectangleFactory;
+    private Renderer renderer;
+    private RectangleFactory rectangleFactory;
 
     private KeyInputHandler input;
     private LevelPopulation population;
@@ -73,6 +91,28 @@ public class GameDesktopLauncher implements ApplicationListener {
         S, Direction.DOWN,
         D, Direction.RIGHT
     );
+
+    private List<GridPoint2> randomFreeTiles(int count) {
+        int width = groundLayer.getWidth();
+        int height = groundLayer.getHeight();
+        List<GridPoint2> freeTiles = new ArrayList<>();
+        
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                GridPoint2 candidate = new GridPoint2(x, y);
+                if (field.playerCanMoveTo(candidate)) {
+                    freeTiles.add(candidate);
+                }
+            }
+        }
+        
+        if (freeTiles.size() < count) {
+            throw new IllegalStateException("Not enough free tiles available");
+        }
+        
+        java.util.Collections.shuffle(freeTiles, new Random(System.currentTimeMillis()));
+        return freeTiles.subList(0, count);
+    }
 
     @Override
     public void create() {
@@ -93,11 +133,12 @@ public class GameDesktopLauncher implements ApplicationListener {
         tm = new TileMovement(field.ground(), Interpolation.smooth, positioner);
         moveChecker = new MoveCheckerAdapter(field);
         mover = new TileMoverAdapter(tm);
+        movementBlocker = new MovementBlockerAdapter(field);
 
         population = LOAD_FROM_TEXT
             ? LevelLoader.fromTextFile(groundLayer, LEVEL_TEXT_PATH)
             : LevelLoader.random(groundLayer, RANDOM_TREES_COUNT);
-        player = new Tank(blueTankTexture, population.playerStart, moveChecker, mover);
+        player = new Tank(blueTankTexture, population.playerStart, moveChecker, mover, movementBlocker);
 
         greenTreeTexture = new Texture("images/greenTree.png");
         renderer = new RendererAdapter();
@@ -109,6 +150,13 @@ public class GameDesktopLauncher implements ApplicationListener {
         }
 
         input = new KeyInputHandler();
+        ai = new RandomAiController(AI_MOVES_PER_SECOND);
+        enemies = new ArrayList<>();
+
+        List<GridPoint2> enemyPositions = randomFreeTiles(RANDOM_ENEMIES_COUNT);
+        for (GridPoint2 pos : enemyPositions) {
+            enemies.add(new Tank(blueTankTexture, pos, moveChecker, mover, movementBlocker));
+        }
     }
 
     @Override
@@ -120,10 +168,16 @@ public class GameDesktopLauncher implements ApplicationListener {
         // get time passed since the last render
         float deltaTime = Gdx.graphics.getDeltaTime();
 
-        input.handleMovement(player, KEY_TO_DIRECTION);
+        var cmd = input.getMoveCommand(player, KEY_TO_DIRECTION);
+        if (cmd != null) 
+            cmd.execute();
         input.handleActions(player);
 
         player.update(deltaTime, MOVEMENT_SPEED);
+        for (Tank e : enemies) {
+            e.update(deltaTime, MOVEMENT_SPEED);
+        }
+        ai.tick(deltaTime, enemies);
 
         // render each tile of the level
         field.render();
@@ -133,6 +187,11 @@ public class GameDesktopLauncher implements ApplicationListener {
 
         // render player
         player.render(batch);
+
+        // render enemies
+        for (Tank e : enemies) {
+            e.render(batch);
+        }
 
         // render tree obstacle
         field.renderTrees(batch);

@@ -7,6 +7,7 @@ import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.Rectangle;
 
 import ru.mipt.bit.platformer.interfaces.MoveChecker;
+import ru.mipt.bit.platformer.interfaces.MovementBlocker;
 import ru.mipt.bit.platformer.interfaces.TileMover;
 
 import static com.badlogic.gdx.math.MathUtils.isEqual;
@@ -26,16 +27,21 @@ public class Tank {
 
     private final TileMover tileMover;
     private final MoveChecker moveChecker;
+    private final MovementBlocker movementBlocker;
 
-    public Tank(Texture texture, GridPoint2 start, MoveChecker moveChecker, TileMover tileMover) {
+    public Tank(Texture texture, GridPoint2 start, MoveChecker moveChecker, TileMover tileMover, MovementBlocker movementBlocker) {
         this.texture = texture;
         this.playerGraphics = new TextureRegion(texture);
         this.playerRectangle = createBoundingRectangle(playerGraphics);
         this.moveChecker = moveChecker;
         this.tileMover = tileMover;
+        this.movementBlocker = movementBlocker;
 
         this.playerDestinationCoordinates.set(start);
         this.playerCoordinates.set(start);
+        if (movementBlocker != null) {
+            movementBlocker.occupy(new GridPoint2(start));
+        }
     }
 
     public Rectangle getRectangle() {
@@ -55,8 +61,11 @@ public class Tank {
 
         GridPoint2 next = new GridPoint2(playerCoordinates.x + direction.dx, playerCoordinates.y + direction.dy);
         if (moveChecker.playerCanMoveTo(next)) {
-            playerDestinationCoordinates.set(next);
-            playerMovementProgress = 0f;
+            boolean reserved = movementBlocker == null || movementBlocker.reserveMove(new GridPoint2(playerCoordinates), next);
+            if (reserved) {
+                playerDestinationCoordinates.set(next);
+                playerMovementProgress = 0f;
+            }
         }
         rotation = direction.rotation;
     }
@@ -66,6 +75,9 @@ public class Tank {
         playerMovementProgress = continueProgress(playerMovementProgress, delta, movementSpeed);
 
         if (isEqual(playerMovementProgress, 1f)) {
+            if (movementBlocker != null && !(playerCoordinates.equals(playerDestinationCoordinates))) {
+                movementBlocker.finishMove(new GridPoint2(playerCoordinates), new GridPoint2(playerDestinationCoordinates));
+            }
             playerCoordinates.set(playerDestinationCoordinates);
         }
     }

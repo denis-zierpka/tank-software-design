@@ -42,7 +42,9 @@ public class KeyInputHandlerTest {
         when(input.isKeyPressed(1)).thenReturn(true);
         when(input.isKeyPressed(2)).thenReturn(false);
 
-        handler.handleMovement(tank, keyToDir);
+        var cmd = handler.getMoveCommand(tank, keyToDir);
+        if (cmd != null) 
+            cmd.execute();
 
         verify(tank, times(1)).tryMove(Direction.UP);
         verifyNoMoreInteractions(tank);
@@ -59,7 +61,9 @@ public class KeyInputHandlerTest {
 
         when(input.isKeyPressed(anyInt())).thenReturn(false);
 
-        handler.handleMovement(tank, keyToDir);
+        var cmd = handler.getMoveCommand(tank, keyToDir);
+        if (cmd != null) 
+            cmd.execute();
 
         verifyNoInteractions(tank);
     }
@@ -79,7 +83,9 @@ public class KeyInputHandlerTest {
         when(input.isKeyPressed(1)).thenReturn(true);
         when(input.isKeyPressed(2)).thenReturn(true);
 
-        handler.handleMovement(tank, keyToDir);
+        var cmd = handler.getMoveCommand(tank, keyToDir);
+        if (cmd != null) 
+            cmd.execute();
 
         verify(tank, times(1)).tryMove(Direction.UP);
         verify(tank, never()).tryMove(Direction.LEFT);

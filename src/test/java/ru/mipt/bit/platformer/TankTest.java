@@ -38,7 +38,7 @@ public class TankTest {
 
             utils.when(() -> continueProgress(anyFloat(), anyFloat(), anyFloat())).thenReturn(1f);
 
-            Tank tank = new Tank(texture, start, field, mover);
+            Tank tank = new Tank(texture, start, field, mover, null);
 
             tank.tryMove(Direction.RIGHT);
             tank.update(0.016f, 0.4f);
@@ -66,7 +66,7 @@ public class TankTest {
             when(field.playerCanMoveTo(new GridPoint2(2, 4))).thenReturn(false);
             utils.when(() -> continueProgress(anyFloat(), anyFloat(), anyFloat())).thenReturn(1f);
 
-            Tank tank = new Tank(texture, start, field, mover);
+            Tank tank = new Tank(texture, start, field, mover, null);
             tank.tryMove(Direction.LEFT);
             tank.update(0.016f, 0.4f);
 
@@ -94,7 +94,7 @@ public class TankTest {
             when(field.playerCanMoveTo(new GridPoint2(2, 1))).thenReturn(true);
             utils.when(() -> continueProgress(anyFloat(), anyFloat(), anyFloat())).thenReturn(0.2f);
 
-            Tank tank = new Tank(texture, start, field, mover);
+            Tank tank = new Tank(texture, start, field, mover, null);
             tank.tryMove(Direction.RIGHT);
             tank.update(0.016f, 0.4f);
 
