@@ -9,11 +9,12 @@ import com.badlogic.gdx.math.Rectangle;
 import ru.mipt.bit.platformer.interfaces.MoveChecker;
 import ru.mipt.bit.platformer.interfaces.MovementBlocker;
 import ru.mipt.bit.platformer.interfaces.TileMover;
+import ru.mipt.bit.platformer.interfaces.HealthRenderable;
 
 import static com.badlogic.gdx.math.MathUtils.isEqual;
 import static ru.mipt.bit.platformer.util.GdxGameUtils.*;
 
-public class Tank {
+public class Tank implements HealthRenderable {
 
     private final Texture texture;
     private final TextureRegion playerGraphics;
@@ -29,13 +30,23 @@ public class Tank {
     private final MoveChecker moveChecker;
     private final MovementBlocker movementBlocker;
 
+    private final int maxHealth;
+    private int currentHealth;
+
     public Tank(Texture texture, GridPoint2 start, MoveChecker moveChecker, TileMover tileMover, MovementBlocker movementBlocker) {
+        this(texture, start, moveChecker, tileMover, movementBlocker, 100);
+    }
+
+    public Tank(Texture texture, GridPoint2 start, MoveChecker moveChecker, TileMover tileMover, MovementBlocker movementBlocker, int maxHealth) {
         this.texture = texture;
         this.playerGraphics = new TextureRegion(texture);
         this.playerRectangle = createBoundingRectangle(playerGraphics);
         this.moveChecker = moveChecker;
         this.tileMover = tileMover;
         this.movementBlocker = movementBlocker;
+        this.maxHealth = maxHealth;
+        int minHealth = (int) (maxHealth * 0.8f);
+        this.currentHealth = minHealth + (int) (Math.random() * (maxHealth - minHealth + 1));
 
         this.playerDestinationCoordinates.set(start);
         this.playerCoordinates.set(start);
@@ -44,6 +55,7 @@ public class Tank {
         }
     }
 
+    @Override
     public Rectangle getRectangle() {
         return playerRectangle; 
     }
@@ -54,6 +66,21 @@ public class Tank {
 
     public Texture getTexture() {
         return texture;
+    }
+
+    @Override
+    public int getMaxHealth() {
+        return maxHealth;
+    }
+
+    @Override
+    public int getCurrentHealth() {
+        return currentHealth;
+    }
+
+    @Override
+    public float getHealthPercentage() {
+        return maxHealth > 0 ? (float) currentHealth / maxHealth : 0f;
     }
 
     public void tryMove(Direction direction) {
@@ -82,7 +109,12 @@ public class Tank {
         }
     }
 
-    public void render(Batch batch) {
+    public void renderBase(Batch batch) {
         drawTextureRegionUnscaled(batch, playerGraphics, playerRectangle, rotation);
+    }
+
+    @Override
+    public void render(Batch batch) {
+        renderBase(batch);
     }
 }
