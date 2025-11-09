@@ -50,6 +50,25 @@ public class Field {
         return isInsideBounds(destination) && !blocked.contains(destination);
     }
 
+    public void occupy(GridPoint2 coordinates) {
+        blocked.add(new GridPoint2(coordinates));
+    }
+
+    public boolean reserveMove(GridPoint2 from, GridPoint2 to) {
+        if (!isInsideBounds(to)) 
+            return false;
+        if (blocked.contains(to)) 
+            return false;
+
+        blocked.add(new GridPoint2(to));
+        return true;
+    }
+
+    public void finishMove(GridPoint2 from, GridPoint2 to) {
+        blocked.remove(from);
+        blocked.add(new GridPoint2(to));
+    }
+
     public void renderTrees(Batch batch) {
         for (Tree tree : trees) {
             tree.render(batch);

@@ -2,16 +2,20 @@ package ru.mipt.bit.platformer.models;
 
 import com.badlogic.gdx.Gdx;
 import static com.badlogic.gdx.Input.Keys.SPACE;
+import java.util.Map;
+
+import ru.mipt.bit.platformer.adapters.CommandAdapter;
+import ru.mipt.bit.platformer.interfaces.Command;
 
 public class KeyInputHandler {
 
-    public void handleMovement(Tank player, java.util.Map<Integer, Direction> keyToDirection) {
+    public Command getMoveCommand(Tank player, Map<Integer, Direction> keyToDirection) {
         for (var entry : keyToDirection.entrySet()) {
             if (Gdx.input.isKeyPressed(entry.getKey())) {
-                player.tryMove(entry.getValue());
-                break;
+                return new CommandAdapter(player, entry.getValue());
             }
         }
+        return null;
     }
 
     public void handleActions(Tank player) {
