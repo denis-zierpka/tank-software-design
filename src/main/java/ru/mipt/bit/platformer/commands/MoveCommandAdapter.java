@@ -1,14 +1,14 @@
-package ru.mipt.bit.platformer.adapters;
+package ru.mipt.bit.platformer.commands;
 
 import ru.mipt.bit.platformer.interfaces.Command;
 import ru.mipt.bit.platformer.models.Direction;
 import ru.mipt.bit.platformer.models.Tank;
 
-public class CommandAdapter implements Command {
+public class MoveCommandAdapter implements Command {
     private final Tank tank;
     private final Direction direction;
 
-    public CommandAdapter(Tank tank, Direction direction) {
+    public MoveCommandAdapter(Tank tank, Direction direction) {
         this.tank = tank;
         this.direction = direction;
     }

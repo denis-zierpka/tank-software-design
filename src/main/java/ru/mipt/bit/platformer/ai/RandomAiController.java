@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import ru.mipt.bit.platformer.adapters.CommandAdapter;
+import ru.mipt.bit.platformer.commands.MoveCommandAdapter;
 import ru.mipt.bit.platformer.interfaces.Command;
 import ru.mipt.bit.platformer.models.Direction;
 import ru.mipt.bit.platformer.models.Tank;
@@ -26,7 +26,7 @@ public class RandomAiController {
             float acc = secondsSinceLastMove.getOrDefault(t, 0f) + deltaSeconds;
             if (acc >= interval) {
                 Direction dir = Direction.values()[rnd.nextInt(Direction.values().length)];
-                Command cmd = new CommandAdapter(t, dir);
+                Command cmd = new MoveCommandAdapter(t, dir);
                 cmd.execute();
                 acc -= interval;
             }
