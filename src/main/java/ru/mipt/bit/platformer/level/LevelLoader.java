@@ -8,7 +8,15 @@ import com.badlogic.gdx.math.GridPoint2;
 import java.util.*;
 
 public final class LevelLoader {
+    
+    public static final boolean LOAD_FROM_TEXT = true;
+    public static final String LEVEL_TEXT_PATH = "population.txt";
+    public static final int RANDOM_TREES_COUNT = 15;
 
+    public static LevelPopulation fromTextFile(TiledMapTileLayer ground) {
+        return fromTextFile(ground, LEVEL_TEXT_PATH);
+    }
+    
     public static LevelPopulation fromTextFile(TiledMapTileLayer ground, String path) {
         FileHandle fh = Gdx.files.internal(path);
         String[] lines = fh.readString("UTF-8").split("\n");
@@ -52,6 +60,10 @@ public final class LevelLoader {
         return new LevelPopulation(player, trees);
     }
 
+    public static LevelPopulation random(TiledMapTileLayer ground) {
+        return random(ground, RANDOM_TREES_COUNT);
+    }
+    
     public static LevelPopulation random(TiledMapTileLayer ground, int treeCount) {
         int w = ground.getWidth();
         int h = ground.getHeight();

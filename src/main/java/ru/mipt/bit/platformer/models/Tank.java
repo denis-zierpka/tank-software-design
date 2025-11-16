@@ -10,11 +10,16 @@ import ru.mipt.bit.platformer.interfaces.MoveChecker;
 import ru.mipt.bit.platformer.interfaces.MovementBlocker;
 import ru.mipt.bit.platformer.interfaces.TileMover;
 import ru.mipt.bit.platformer.interfaces.HealthRenderable;
+import ru.mipt.bit.platformer.interfaces.BulletCreator;
 
 import static com.badlogic.gdx.math.MathUtils.isEqual;
 import static ru.mipt.bit.platformer.util.GdxGameUtils.*;
 
 public class Tank implements HealthRenderable {
+    
+    public static final float MOVEMENT_SPEED = 0.4f;
+    public static final int DEFAULT_MIN_HEALTH = 80;
+    public static final int DEFAULT_MAX_HEALTH = 100;
 
     private final Texture texture;
     private final TextureRegion playerGraphics;
@@ -29,12 +34,13 @@ public class Tank implements HealthRenderable {
     private final TileMover tileMover;
     private final MoveChecker moveChecker;
     private final MovementBlocker movementBlocker;
+    private BulletCreator bulletCreator;
 
     private final int maxHealth;
     private int currentHealth;
 
     public Tank(Texture texture, GridPoint2 start, MoveChecker moveChecker, TileMover tileMover, MovementBlocker movementBlocker) {
-        this(texture, start, moveChecker, tileMover, movementBlocker, 100);
+        this(texture, start, moveChecker, tileMover, movementBlocker, DEFAULT_MAX_HEALTH);
     }
 
     public Tank(Texture texture, GridPoint2 start, MoveChecker moveChecker, TileMover tileMover, MovementBlocker movementBlocker, int maxHealth) {
@@ -63,6 +69,14 @@ public class Tank implements HealthRenderable {
     public GridPoint2 getCoordinates() {
         return playerCoordinates; 
     }
+    
+    public GridPoint2 getDestinationCoordinates() {
+        return playerDestinationCoordinates;
+    }
+    
+    public boolean isMoving() {
+        return !isEqual(playerMovementProgress, 1f);
+    }
 
     public Texture getTexture() {
         return texture;
@@ -82,6 +96,42 @@ public class Tank implements HealthRenderable {
     public float getHealthPercentage() {
         return maxHealth > 0 ? (float) currentHealth / maxHealth : 0f;
     }
+    
+    public void takeDamage(int damage) {
+        currentHealth -= damage;
+        if (currentHealth < 0) {
+            currentHealth = 0;
+        }
+    }
+    
+    public float getRotation() {
+        return rotation;
+    }
+    
+    public Direction getCurrentDirection() {
+        if (isEqual(rotation, 90f)) return Direction.UP;
+        if (isEqual(rotation, -180f)) return Direction.LEFT;
+        if (isEqual(rotation, -90f)) return Direction.DOWN;
+        return Direction.RIGHT;
+    }
+    
+    public void setBulletCreator(BulletCreator bulletCreator) {
+        this.bulletCreator = bulletCreator;
+    }
+    
+    public void tryShoot() {
+        if (bulletCreator == null)
+            throw new IllegalStateException("Bullet creator is not set");
+        
+        Direction direction = getCurrentDirection();
+        
+        GridPoint2 bulletStart = new GridPoint2(
+            playerCoordinates.x + direction.dx,
+            playerCoordinates.y + direction.dy
+        );
+        
+        bulletCreator.createBullet(bulletStart, direction, this);
+    }
 
     public void tryMove(Direction direction) {
         if (!isEqual(playerMovementProgress, 1f)) return;
@@ -97,7 +147,7 @@ public class Tank implements HealthRenderable {
         rotation = direction.rotation;
     }
 
-    public void update(float delta, float movementSpeed) {
+    public void tick(float delta, float movementSpeed) {
         tileMover.moveBetweenTileCenters(playerRectangle, playerCoordinates, playerDestinationCoordinates, playerMovementProgress);
         playerMovementProgress = continueProgress(playerMovementProgress, delta, movementSpeed);
 

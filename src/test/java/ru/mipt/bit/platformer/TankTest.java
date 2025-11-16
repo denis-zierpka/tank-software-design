@@ -41,7 +41,7 @@ public class TankTest {
             Tank tank = new Tank(texture, start, field, mover, null);
 
             tank.tryMove(Direction.RIGHT);
-            tank.update(0.016f, 0.4f);
+            tank.tick(0.016f, 0.4f);
 
             GridPoint2 pos = tank.getCoordinates();
             assertEquals(2, pos.x);
@@ -68,7 +68,7 @@ public class TankTest {
 
             Tank tank = new Tank(texture, start, field, mover, null);
             tank.tryMove(Direction.LEFT);
-            tank.update(0.016f, 0.4f);
+            tank.tick(0.016f, 0.4f);
 
             GridPoint2 pos = tank.getCoordinates();
             assertEquals(3, pos.x);
@@ -96,7 +96,7 @@ public class TankTest {
 
             Tank tank = new Tank(texture, start, field, mover, null);
             tank.tryMove(Direction.RIGHT);
-            tank.update(0.016f, 0.4f);
+            tank.tick(0.016f, 0.4f);
 
             tank.render(batch);
             utils.verify(() -> drawTextureRegionUnscaled(eq(batch), any(TextureRegion.class), eq(rect), eq(0f)), times(1));

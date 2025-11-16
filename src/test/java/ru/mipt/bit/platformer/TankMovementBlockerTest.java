@@ -56,7 +56,7 @@ public class TankMovementBlockerTest {
             tank.tryMove(Direction.RIGHT);
             assertFalse(field.playerCanMoveTo(new GridPoint2(2, 1)));
 
-            tank.update(0.016f, 0.4f);
+            tank.tick(0.016f, 0.4f);
             assertTrue(field.playerCanMoveTo(new GridPoint2(1, 1)));
         }
     }
