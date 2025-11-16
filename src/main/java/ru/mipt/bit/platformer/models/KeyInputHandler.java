@@ -1,15 +1,26 @@
 package ru.mipt.bit.platformer.models;
 
 import com.badlogic.gdx.Gdx;
-import static com.badlogic.gdx.Input.Keys.SPACE;
-import static com.badlogic.gdx.Input.Keys.L;
+import static com.badlogic.gdx.Input.Keys.*;
 import java.util.Map;
 
 import ru.mipt.bit.platformer.commands.MoveCommandAdapter;
+import ru.mipt.bit.platformer.commands.ShootCommand;
 import ru.mipt.bit.platformer.commands.ToggleHealthBarCommand;
 import ru.mipt.bit.platformer.interfaces.Command;
 
 public class KeyInputHandler {
+    
+    public static final java.util.Map<Integer, Direction> KEY_TO_DIRECTION = java.util.Map.of(
+        UP, Direction.UP,
+        LEFT, Direction.LEFT,
+        DOWN, Direction.DOWN,
+        RIGHT, Direction.RIGHT,
+        W, Direction.UP,
+        A, Direction.LEFT,
+        S, Direction.DOWN,
+        D, Direction.RIGHT
+    );
 
     public Command getMoveCommand(Tank player, Map<Integer, Direction> keyToDirection) {
         for (var entry : keyToDirection.entrySet()) {
@@ -27,9 +38,10 @@ public class KeyInputHandler {
         return null;
     }
 
-    public void handleActions(Tank player) {
+    public Command getShootCommand(Tank player) {
         if (Gdx.input.isKeyJustPressed(SPACE)) {
-            // TODO: shoot logic
+            return new ShootCommand(player);
         }
+        return null;
     }
 }

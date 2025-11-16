@@ -15,6 +15,8 @@ import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.Interpolation;
 
+import ru.mipt.bit.platformer.adapters.BulletCreatorAdapter;
+import ru.mipt.bit.platformer.adapters.BulletCreatorObserver;
 import ru.mipt.bit.platformer.adapters.MoveCheckerAdapter;
 import ru.mipt.bit.platformer.adapters.MovementBlockerAdapter;
 import ru.mipt.bit.platformer.adapters.LevelRendererAdapter;
@@ -24,7 +26,6 @@ import ru.mipt.bit.platformer.adapters.TileMoverAdapter;
 import ru.mipt.bit.platformer.adapters.TileObjectPositionerAdapter;
 import ru.mipt.bit.platformer.level.LevelLoader;
 import ru.mipt.bit.platformer.level.LevelPopulation;
-import ru.mipt.bit.platformer.models.Direction;
 import ru.mipt.bit.platformer.models.Field;
 import ru.mipt.bit.platformer.models.HealthBarToggleState;
 import ru.mipt.bit.platformer.models.KeyInputHandler;
@@ -33,6 +34,8 @@ import ru.mipt.bit.platformer.models.TankWithHealthBar;
 import ru.mipt.bit.platformer.models.TileMovement;
 import ru.mipt.bit.platformer.models.Tree;
 import ru.mipt.bit.platformer.ai.RandomAiController;
+import ru.mipt.bit.platformer.graphics.GraphicsRenderer;
+import ru.mipt.bit.platformer.interfaces.BulletCreator;
 import ru.mipt.bit.platformer.interfaces.LevelRenderer;
 import ru.mipt.bit.platformer.interfaces.MoveChecker;
 import ru.mipt.bit.platformer.interfaces.MovementBlocker;
@@ -45,20 +48,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import static com.badlogic.gdx.Input.Keys.*;
-import static com.badlogic.gdx.graphics.GL20.GL_COLOR_BUFFER_BIT;
 import static ru.mipt.bit.platformer.util.GdxGameUtils.*;
 
 public class GameDesktopLauncher implements ApplicationListener {
 
-    private static final float MOVEMENT_SPEED = 0.4f;
-    private static final boolean LOAD_FROM_TEXT = true;
-    private static final String LEVEL_TEXT_PATH = "population.txt";
-    private static final int RANDOM_TREES_COUNT = 15;
-    private static final int RANDOM_ENEMIES_COUNT = 3;
-    private static final float AI_MOVES_PER_SECOND = 2.0f;
-    private static final int MIN_RND_HEALTH = 80;
-    private static final int MAX_RND_HEALTH = 100;
 
     private Batch batch;
     private ShapeRenderer shapeRenderer;
@@ -70,14 +63,12 @@ public class GameDesktopLauncher implements ApplicationListener {
     private TileObjectPositioner positioner;
 
     private Field field;
+    private GraphicsRenderer graphicsRenderer;
 
     private Texture blueTankTexture;
     private TileMovement tm;
     private MoveChecker moveChecker;
     private TileMover mover;
-    private Tank player;
-    private List<Tank> enemies;
-    private RandomAiController ai;
     private MovementBlocker movementBlocker;
 
     private Texture greenTreeTexture;
@@ -88,17 +79,8 @@ public class GameDesktopLauncher implements ApplicationListener {
     private LevelPopulation population;
     private HealthBarToggleState healthBarToggleState;
     private Random random;
-
-    private static final java.util.Map<Integer, Direction> KEY_TO_DIRECTION = java.util.Map.of(
-        UP, Direction.UP,
-        LEFT, Direction.LEFT,
-        DOWN, Direction.DOWN,
-        RIGHT, Direction.RIGHT,
-        W, Direction.UP,
-        A, Direction.LEFT,
-        S, Direction.DOWN,
-        D, Direction.RIGHT
-    );
+    
+    private BulletCreatorObserver bulletCreatorObserver;
 
     private List<GridPoint2> randomFreeTiles(int count) {
         int width = groundLayer.getWidth();
@@ -137,6 +119,11 @@ public class GameDesktopLauncher implements ApplicationListener {
         positioner = new TileObjectPositionerAdapter();
 
         field = new Field(levelRenderer, groundLayer, positioner);
+        graphicsRenderer = new GraphicsRenderer(batch, field);
+        bulletCreatorObserver = new BulletCreatorObserver(field, shapeRenderer);
+
+        BulletCreator initialBulletCreator = new BulletCreatorAdapter(field, shapeRenderer);
+        bulletCreatorObserver.setBulletCreator(initialBulletCreator);
 
         // Texture decodes an image file and loads it into GPU memory, it represents a native resource
         blueTankTexture = new Texture("images/tank_blue.png");
@@ -145,12 +132,16 @@ public class GameDesktopLauncher implements ApplicationListener {
         mover = new TileMoverAdapter(tm);
         movementBlocker = new MovementBlockerAdapter(field);
 
-        population = LOAD_FROM_TEXT
-            ? LevelLoader.fromTextFile(groundLayer, LEVEL_TEXT_PATH)
-            : LevelLoader.random(groundLayer, RANDOM_TREES_COUNT);
+        population = LevelLoader.LOAD_FROM_TEXT
+            ? LevelLoader.fromTextFile(groundLayer)
+            : LevelLoader.random(groundLayer);
         
-        int playerHealth = MIN_RND_HEALTH + random.nextInt(MAX_RND_HEALTH - MIN_RND_HEALTH + 1);
-        player = new TankWithHealthBar(blueTankTexture, population.playerStart, moveChecker, mover, movementBlocker, playerHealth, shapeRenderer);
+        int playerHealth = Tank.DEFAULT_MIN_HEALTH + random.nextInt(Tank.DEFAULT_MAX_HEALTH - Tank.DEFAULT_MIN_HEALTH + 1);
+        Tank player = new TankWithHealthBar(blueTankTexture, population.playerStart, moveChecker, mover, movementBlocker, playerHealth, shapeRenderer);
+        
+        player.setBulletCreator(initialBulletCreator);
+        field.addTank(player);
+        field.setPlayer(player);
 
         greenTreeTexture = new Texture("images/greenTree.png");
         renderer = new RendererAdapter();
@@ -162,66 +153,47 @@ public class GameDesktopLauncher implements ApplicationListener {
         }
 
         input = new KeyInputHandler();
-        ai = new RandomAiController(AI_MOVES_PER_SECOND);
-        enemies = new ArrayList<>();
+        RandomAiController ai = new RandomAiController();
+        field.setAiController(ai);
+        field.setMovementSpeed(Tank.MOVEMENT_SPEED);
         healthBarToggleState = new HealthBarToggleState();
 
-        List<GridPoint2> enemyPositions = randomFreeTiles(RANDOM_ENEMIES_COUNT);
+        List<GridPoint2> enemyPositions = randomFreeTiles(RandomAiController.RANDOM_ENEMIES_COUNT);
         for (GridPoint2 pos : enemyPositions) {
-            int enemyHealth = MIN_RND_HEALTH + random.nextInt(MAX_RND_HEALTH - MIN_RND_HEALTH + 1);
+            int enemyHealth = Tank.DEFAULT_MIN_HEALTH + random.nextInt(Tank.DEFAULT_MAX_HEALTH - Tank.DEFAULT_MIN_HEALTH + 1);
             Tank enemy = new TankWithHealthBar(blueTankTexture, pos, moveChecker, mover, movementBlocker, enemyHealth, shapeRenderer);
-            enemies.add(enemy);
+            enemy.setBulletCreator(bulletCreatorObserver.getBulletCreator());
+            field.addTank(enemy);
         }
     }
 
     @Override
     public void render() {
-        // clear the screen
-        Gdx.gl.glClearColor(0f, 0f, 0.2f, 1f);
-        Gdx.gl.glClear(GL_COLOR_BUFFER_BIT);
-
         // get time passed since the last render
         float deltaTime = Gdx.graphics.getDeltaTime();
 
-        var cmd = input.getMoveCommand(player, KEY_TO_DIRECTION);
-        if (cmd != null) 
-            cmd.execute();
-        
-        var toggleCmd = input.handleHealthBarToggle(healthBarToggleState);
-        if (toggleCmd != null)
-            toggleCmd.execute();
-        
-        input.handleActions(player);
+        Tank player = field.getPlayer();
+        if (player != null && player.getCurrentHealth() > 0) {
+            var cmd = input.getMoveCommand(player, KeyInputHandler.KEY_TO_DIRECTION);
+            if (cmd != null) 
+                cmd.execute();
+            
+            var toggleCmd = input.handleHealthBarToggle(healthBarToggleState);
+            if (toggleCmd != null)
+                toggleCmd.execute();
+            
+            var shootCmd = input.getShootCommand(player);
+            if (shootCmd != null)
+                shootCmd.execute();
 
-        player.update(deltaTime, MOVEMENT_SPEED);
-        for (Tank e : enemies) {
-            e.update(deltaTime, MOVEMENT_SPEED);
+            player.tick(deltaTime, Tank.MOVEMENT_SPEED);
         }
-        ai.tick(deltaTime, enemies);
+        
+        // update all objects on the field
+        field.tickAll(deltaTime);
 
-        // render each tile of the level
-        field.render();
-
-        // start recording all drawing commands
-        batch.begin();
-
-        boolean showHealth = healthBarToggleState.isBarVisible();
-
-        // render player
-        player.setHealthBarVisible(showHealth);
-        player.render(batch);
-
-        // render enemies
-        for (Tank e : enemies) {
-            e.setHealthBarVisible(showHealth);
-            e.render(batch);
-        }
-
-        // render tree obstacle
-        field.renderTrees(batch);
-
-        // submit all drawing requests
-        batch.end();
+        // render all graphics
+        graphicsRenderer.render(healthBarToggleState);
     }
 
     @Override
