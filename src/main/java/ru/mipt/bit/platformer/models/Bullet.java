@@ -6,9 +6,12 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.Rectangle;
 
+import ru.mipt.bit.platformer.interfaces.Tickable;
+import ru.mipt.bit.platformer.interfaces.TickContext;
+
 import java.util.List;
 
-public class Bullet {
+public class Bullet implements Tickable {
     
     private static final float BULLET_SPEED = 5.0f;
     private static final float BULLET_SIZE = 8f;
@@ -110,6 +113,11 @@ public class Bullet {
                 return;
             
         }
+    }
+    
+    @Override
+    public void tick(TickContext context) {
+        tick(context.getDeltaTime());
     }
     
     private void updateRectanglePositionWithProgress() {

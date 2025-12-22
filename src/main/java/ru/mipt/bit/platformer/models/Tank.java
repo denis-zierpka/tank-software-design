@@ -11,11 +11,13 @@ import ru.mipt.bit.platformer.interfaces.MovementBlocker;
 import ru.mipt.bit.platformer.interfaces.TileMover;
 import ru.mipt.bit.platformer.interfaces.HealthRenderable;
 import ru.mipt.bit.platformer.interfaces.BulletCreator;
+import ru.mipt.bit.platformer.interfaces.Tickable;
+import ru.mipt.bit.platformer.interfaces.TickContext;
 
 import static com.badlogic.gdx.math.MathUtils.isEqual;
 import static ru.mipt.bit.platformer.util.GdxGameUtils.*;
 
-public class Tank implements HealthRenderable {
+public class Tank implements HealthRenderable, Tickable {
     
     public static final float MOVEMENT_SPEED = 0.4f;
     public static final int DEFAULT_MIN_HEALTH = 80;
@@ -97,6 +99,11 @@ public class Tank implements HealthRenderable {
         return maxHealth > 0 ? (float) currentHealth / maxHealth : 0f;
     }
     
+    @Override
+    public boolean isAlive() {
+        return getCurrentHealth() > 0;
+    }
+    
     public void takeDamage(int damage) {
         currentHealth -= damage;
         if (currentHealth < 0) {
@@ -147,7 +154,11 @@ public class Tank implements HealthRenderable {
         rotation = direction.rotation;
     }
 
-    public void tick(float delta, float movementSpeed) {
+    @Override
+    public void tick(TickContext context) {
+        float delta = context.getDeltaTime();
+        float movementSpeed = context.getMovementSpeed();
+        
         tileMover.moveBetweenTileCenters(playerRectangle, playerCoordinates, playerDestinationCoordinates, playerMovementProgress);
         playerMovementProgress = continueProgress(playerMovementProgress, delta, movementSpeed);
 

@@ -6,24 +6,14 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.maps.MapRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
-import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.math.GridPoint2;
-import com.badlogic.gdx.math.Interpolation;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
-import ru.mipt.bit.platformer.adapters.BulletCreatorAdapter;
 import ru.mipt.bit.platformer.adapters.BulletCreatorObserver;
-import ru.mipt.bit.platformer.adapters.MoveCheckerAdapter;
-import ru.mipt.bit.platformer.adapters.MovementBlockerAdapter;
-import ru.mipt.bit.platformer.adapters.LevelRendererAdapter;
-import ru.mipt.bit.platformer.adapters.RectangleFactoryAdapter;
-import ru.mipt.bit.platformer.adapters.RendererAdapter;
-import ru.mipt.bit.platformer.adapters.TileMoverAdapter;
-import ru.mipt.bit.platformer.adapters.TileObjectPositionerAdapter;
+import ru.mipt.bit.platformer.config.GameConfig;
 import ru.mipt.bit.platformer.level.LevelLoader;
 import ru.mipt.bit.platformer.level.LevelPopulation;
 import ru.mipt.bit.platformer.models.Field;
@@ -31,42 +21,35 @@ import ru.mipt.bit.platformer.models.HealthBarToggleState;
 import ru.mipt.bit.platformer.models.KeyInputHandler;
 import ru.mipt.bit.platformer.models.Tank;
 import ru.mipt.bit.platformer.models.TankWithHealthBar;
-import ru.mipt.bit.platformer.models.TileMovement;
 import ru.mipt.bit.platformer.models.Tree;
 import ru.mipt.bit.platformer.ai.RandomAiController;
 import ru.mipt.bit.platformer.graphics.GraphicsRenderer;
 import ru.mipt.bit.platformer.interfaces.BulletCreator;
-import ru.mipt.bit.platformer.interfaces.LevelRenderer;
 import ru.mipt.bit.platformer.interfaces.MoveChecker;
 import ru.mipt.bit.platformer.interfaces.MovementBlocker;
 import ru.mipt.bit.platformer.interfaces.RectangleFactory;
+import ru.mipt.bit.platformer.interfaces.TickContext;
 import ru.mipt.bit.platformer.interfaces.Renderer;
 import ru.mipt.bit.platformer.interfaces.TileMover;
-import ru.mipt.bit.platformer.interfaces.TileObjectPositioner;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import static ru.mipt.bit.platformer.util.GdxGameUtils.*;
-
 public class GameDesktopLauncher implements ApplicationListener {
 
+    private AnnotationConfigApplicationContext applicationContext;
 
     private Batch batch;
     private ShapeRenderer shapeRenderer;
 
     private TiledMap level;
-    private MapRenderer libRenderer;
     private TiledMapTileLayer groundLayer;
-    private LevelRenderer levelRenderer;
-    private TileObjectPositioner positioner;
 
     private Field field;
     private GraphicsRenderer graphicsRenderer;
 
     private Texture blueTankTexture;
-    private TileMovement tm;
     private MoveChecker moveChecker;
     private TileMover mover;
     private MovementBlocker movementBlocker;
@@ -106,31 +89,32 @@ public class GameDesktopLauncher implements ApplicationListener {
 
     @Override
     public void create() {
-        batch = new SpriteBatch();
-        shapeRenderer = new ShapeRenderer();
+        applicationContext = new AnnotationConfigApplicationContext(GameConfig.class);
+
+        batch = applicationContext.getBean(Batch.class);
+        shapeRenderer = applicationContext.getBean(ShapeRenderer.class);
+        level = applicationContext.getBean(TiledMap.class);
+        groundLayer = applicationContext.getBean(TiledMapTileLayer.class);
+        field = applicationContext.getBean(Field.class);
+        graphicsRenderer = applicationContext.getBean(GraphicsRenderer.class);
+        bulletCreatorObserver = applicationContext.getBean(BulletCreatorObserver.class);
+        moveChecker = applicationContext.getBean(MoveChecker.class);
+        mover = applicationContext.getBean(TileMover.class);
+        movementBlocker = applicationContext.getBean(MovementBlocker.class);
+        renderer = applicationContext.getBean(Renderer.class);
+        rectangleFactory = applicationContext.getBean(RectangleFactory.class);
+        input = applicationContext.getBean(KeyInputHandler.class);
+        healthBarToggleState = applicationContext.getBean(HealthBarToggleState.class);
+        
+        RandomAiController ai = applicationContext.getBean(RandomAiController.class);
+        field.setAiController(ai);
+        field.setMovementSpeed(Tank.MOVEMENT_SPEED);
+
         random = new Random(System.currentTimeMillis());
-
-        // load level tiles
-        level = new TmxMapLoader().load("level.tmx");
-        libRenderer = createSingleLayerMapRenderer(level, batch);
-        groundLayer = getSingleLayer(level);
-
-        levelRenderer = new LevelRendererAdapter(libRenderer);
-        positioner = new TileObjectPositionerAdapter();
-
-        field = new Field(levelRenderer, groundLayer, positioner);
-        graphicsRenderer = new GraphicsRenderer(batch, field);
-        bulletCreatorObserver = new BulletCreatorObserver(field, shapeRenderer);
-
-        BulletCreator initialBulletCreator = new BulletCreatorAdapter(field, shapeRenderer);
-        bulletCreatorObserver.setBulletCreator(initialBulletCreator);
+        BulletCreator initialBulletCreator = bulletCreatorObserver.getBulletCreator();
 
         // Texture decodes an image file and loads it into GPU memory, it represents a native resource
         blueTankTexture = new Texture("images/tank_blue.png");
-        tm = new TileMovement(field.ground(), Interpolation.smooth, positioner);
-        moveChecker = new MoveCheckerAdapter(field);
-        mover = new TileMoverAdapter(tm);
-        movementBlocker = new MovementBlockerAdapter(field);
 
         population = LevelLoader.LOAD_FROM_TEXT
             ? LevelLoader.fromTextFile(groundLayer)
@@ -144,19 +128,11 @@ public class GameDesktopLauncher implements ApplicationListener {
         field.setPlayer(player);
 
         greenTreeTexture = new Texture("images/greenTree.png");
-        renderer = new RendererAdapter();
-        rectangleFactory = new RectangleFactoryAdapter();
 
         for (GridPoint2 pos : population.trees) {
             Tree t = new Tree(greenTreeTexture, pos, renderer, rectangleFactory);
             field.addTree(t);
         }
-
-        input = new KeyInputHandler();
-        RandomAiController ai = new RandomAiController();
-        field.setAiController(ai);
-        field.setMovementSpeed(Tank.MOVEMENT_SPEED);
-        healthBarToggleState = new HealthBarToggleState();
 
         List<GridPoint2> enemyPositions = randomFreeTiles(RandomAiController.RANDOM_ENEMIES_COUNT);
         for (GridPoint2 pos : enemyPositions) {
@@ -186,7 +162,8 @@ public class GameDesktopLauncher implements ApplicationListener {
             if (shootCmd != null)
                 shootCmd.execute();
 
-            player.tick(deltaTime, Tank.MOVEMENT_SPEED);
+            TickContext context = field.createTickContext(deltaTime);
+            player.tick(context);
         }
         
         // update all objects on the field
@@ -219,6 +196,9 @@ public class GameDesktopLauncher implements ApplicationListener {
         level.dispose();
         batch.dispose();
         shapeRenderer.dispose();
+        if (applicationContext != null) {
+            applicationContext.close();
+        }
     }
 
     public static void main(String[] args) {

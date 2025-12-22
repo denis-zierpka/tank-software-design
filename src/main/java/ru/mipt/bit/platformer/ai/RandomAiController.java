@@ -8,10 +8,12 @@ import java.util.Random;
 import ru.mipt.bit.platformer.commands.MoveCommandAdapter;
 import ru.mipt.bit.platformer.commands.ShootCommand;
 import ru.mipt.bit.platformer.interfaces.Command;
+import ru.mipt.bit.platformer.interfaces.Tickable;
+import ru.mipt.bit.platformer.interfaces.TickContext;
 import ru.mipt.bit.platformer.models.Direction;
 import ru.mipt.bit.platformer.models.Tank;
 
-public class RandomAiController {
+public class RandomAiController implements Tickable {
 
     public static final int RANDOM_ENEMIES_COUNT = 5;
     public static final float MOVES_PER_SECOND = 2.0f;
@@ -25,6 +27,7 @@ public class RandomAiController {
     private final Map<Tank, Float> nextShootInterval = new HashMap<>();
     private final float shootProbability;
     private final float averageShootsPerSecond;
+    private List<Tank> tanks;
 
     public RandomAiController() {
         this(MOVES_PER_SECOND, SHOOT_PROBABILITY, AVERAGE_SHOOTS_PER_SECOND);
@@ -45,7 +48,22 @@ public class RandomAiController {
         return minInterval + rnd.nextFloat() * (maxInterval - minInterval);
     }
 
-    public void tick(float deltaSeconds, List<Tank> tanks) {
+    public void setTanks(List<Tank> tanks) {
+        this.tanks = tanks;
+    }
+    
+    @Override
+    public boolean isAlive() {
+        return true;
+    }
+    
+    @Override
+    public void tick(TickContext context) {
+        if (tanks == null) {
+            return;
+        }
+        
+        float deltaSeconds = context.getDeltaTime();
         for (Tank t : tanks) {
             if (averageShootsPerSecond > 0f) {
                 float currentInterval = nextShootInterval.getOrDefault(t, generateRandomShootInterval());
