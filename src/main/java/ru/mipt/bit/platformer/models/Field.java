@@ -9,6 +9,9 @@ import ru.mipt.bit.platformer.interfaces.FieldObserver;
 import ru.mipt.bit.platformer.interfaces.FieldObservable;
 import ru.mipt.bit.platformer.interfaces.LevelRenderer;
 import ru.mipt.bit.platformer.interfaces.TileObjectPositioner;
+import ru.mipt.bit.platformer.interfaces.Tickable;
+import ru.mipt.bit.platformer.interfaces.GameObjectRemover;
+import ru.mipt.bit.platformer.interfaces.TickContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +34,7 @@ public class Field implements FieldObservable {
     
     private Tank player;
     private RandomAiController aiController;
-    private float movementSpeed;
+    private float movementSpeed = Tank.MOVEMENT_SPEED;
 
     public boolean isEnemyFriendlyFire() {
         return ENEMY_FRIENDLY_FIRE;
@@ -243,38 +246,40 @@ public class Field implements FieldObservable {
         return enemies;
     }
     
-    public void tickAll(float deltaTime) {
-        List<Tank> enemies = getEnemies();
-        for (Tank enemy : enemies) {
-            if (enemy.getCurrentHealth() > 0) {
-                enemy.tick(deltaTime, movementSpeed);
+    public TickContext createTickContext(float deltaTime) {
+        return new TickContext(deltaTime, movementSpeed);
+    }
+    
+    private void processTickableGameObjects(List<? extends Tickable> gameObjects, TickContext context, GameObjectRemover remover) {
+        List<Tickable> toRemove = new ArrayList<Tickable>();
+        for (Tickable gameObject : gameObjects) {
+            if (gameObject.isAlive()) {
+                gameObject.tick(context);
+            } else if (remover != null) {
+                toRemove.add(gameObject);
             }
         }
+        if (remover != null) {
+            for (Tickable gameObject : toRemove) {
+                remover.remove(gameObject);
+            }
+        }
+    }
+    
+    public void tickAll(float deltaTime) {
+        TickContext context = createTickContext(deltaTime);
+        List<Tank> enemies = getEnemies();
+        processTickableGameObjects(enemies, context, null);
         
         if (aiController != null) {
-            aiController.tick(deltaTime, enemies);
+            aiController.setTanks(enemies);
+
+            List<RandomAiController> controllers = new ArrayList<RandomAiController>();
+            controllers.add(aiController);
+            processTickableGameObjects(controllers, context, null);
         }
         
-        List<Bullet> bulletsToRemove = new ArrayList<>();
-        for (Bullet bullet : bullets) {
-            if (!bullet.isAlive()) {
-                bulletsToRemove.add(bullet);
-            } else {
-                bullet.tick(deltaTime);
-            }
-        }
-        for (Bullet bullet : bulletsToRemove) {
-            removeBullet(bullet);
-        }
-        
-        List<Tank> tanksToRemove = new ArrayList<>();
-        for (Tank tank : tanks) {
-            if (tank.getCurrentHealth() <= 0) {
-                tanksToRemove.add(tank);
-            }
-        }
-        for (Tank tank : tanksToRemove) {
-            removeTank(tank);
-        }
+        processTickableGameObjects(bullets, context, gameObject -> removeBullet((Bullet) gameObject));
+        processTickableGameObjects(tanks, context, gameObject -> removeTank((Tank) gameObject));
     }
 }

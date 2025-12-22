@@ -28,6 +28,7 @@ import ru.mipt.bit.platformer.interfaces.BulletCreator;
 import ru.mipt.bit.platformer.interfaces.MoveChecker;
 import ru.mipt.bit.platformer.interfaces.MovementBlocker;
 import ru.mipt.bit.platformer.interfaces.RectangleFactory;
+import ru.mipt.bit.platformer.interfaces.TickContext;
 import ru.mipt.bit.platformer.interfaces.Renderer;
 import ru.mipt.bit.platformer.interfaces.TileMover;
 
@@ -161,7 +162,8 @@ public class GameDesktopLauncher implements ApplicationListener {
             if (shootCmd != null)
                 shootCmd.execute();
 
-            player.tick(deltaTime, Tank.MOVEMENT_SPEED);
+            TickContext context = field.createTickContext(deltaTime);
+            player.tick(context);
         }
         
         // update all objects on the field
